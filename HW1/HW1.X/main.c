@@ -53,6 +53,11 @@ int main() {
     DDPCONbits.JTAGEN = 0;
 
     // do your TRIS and LAT commands here
+	TRISAbits.TRISA4 = 0;	  // RA4 as output
+	TRISBbits.TRISB4 = 1;     // RB4 as input
+	LATAbits.LATA4 = 1;      // RA4 is high
+	
+	
 
     __builtin_enable_interrupts();
 
