@@ -64,6 +64,7 @@ int main() {
         // remember the core timer runs at half the CPU speed
 		_CP0_SET_COUNT(0);
 		while (_CP0_GET_COUNT()<12000) {;}
-		LATAbits.LATA4 = !LATAbits.LATA4;	
+		LATAbits.LATA4 = !LATAbits.LATA4;
+		while (!PORTBbits.RB4) {;}
     }
 }
