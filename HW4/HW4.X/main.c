@@ -1,5 +1,6 @@
 #include<xc.h>           // processor SFR definitions
 #include<sys/attribs.h>  // __ISR macro
+#include<math.h>
 #include"spi.h"
 
 // DEVCFG0
@@ -38,11 +39,15 @@
 #pragma config FVBUSONIO = ON // USB BUSON controlled by USB module
 
 #define CS LATBbits.LATB15  // chip select pin
+#define SINWAVELENGTH 100
+#define TRIWAVELENGTH 200
+#define PI 3.14
 
-unsigned char makewave(void);
-
+void makewave(void);
+static volatile unsigned char sinwave[SINWAVELENGTH];
+static volatile unsigned char triwave[TRIWAVELENGTH];
 int main() {
-
+	makewave();
     // do your TRIS and LAT commands here
 	TRISAbits.TRISA4 = 0;	  // RA4 as output
 	TRISBbits.TRISB4 = 1;     // RB4 as input
@@ -50,13 +55,36 @@ int main() {
 	initSPI1();
 	
 	char channel = 0;
-	unsigned char voltage = 128;
+	int i_sin = 0;
+	int i_tri = 0;
 	while (1){
-		write_dac(channel, voltage);
+		_CP0_SET_COUNT(0);
+		
+		while(_CP0_GET_COUNT()<24000){   // one stage
+			channel = 0;
+			write_dac(channel, sinwave[i_sin]);
+			channel = 1;
+			write_dac(channel, triwave[i_tri]);
+		}
+		i_sin++;
+		i_tri++;
+		if(i_sin == SINWAVELENGTH){
+			i_sin = 0;
+		}
+		if(i_tri == TRIWAVELENGTH){
+			i_tri = 0;
+		}
 	}
 
 }
 
-unsigned char makewave(void){
-	
+void makewave(){
+	int i = 0;
+	for (i=0; i<SINWAVELENGTH; i++){
+		sinwave[i] = 127*sin((double)2*PI*i/(SINWAVELENGTH))+128;
+	}
+
+	for (i=0; i<TRIWAVELENGTH; i++){
+		triwave[i] = 255*((double)i/TRIWAVELENGTH);
+	}
 }

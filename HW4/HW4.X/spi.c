@@ -33,7 +33,7 @@ void initSPI1(void){
  	// SPI initialization for reading from the decoder chip
     SPI1CON = 0;              // stop and reset SPI1
     SPI1BUF;                  // read to clear the rx receive buffer
-    SPI1BRG = 0x100;            // bit rate to 8 MHz, SPI4BRG = 80000000/(2*desired)-1
+    SPI1BRG = 0x1;            // bit rate to 8 MHz, SPI4BRG = 80000000/(2*desired)-1
     SPI1STATbits.SPIROV = 0;  // clear the overflow
     SPI1CONbits.MSTEN = 1;    // master mode
 //  SPI1CONbits.MSSEN = 1;    // slave select enable
