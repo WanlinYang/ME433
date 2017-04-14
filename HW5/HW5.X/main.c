@@ -1,5 +1,7 @@
 #include<xc.h>           // processor SFR definitions
 #include<sys/attribs.h>  // __ISR macro
+#include "i2c.h"
+#include "hw5.h"
 
 // DEVCFG0
 #pragma config DEBUG = OFF // no debugging
@@ -37,22 +39,50 @@
 #pragma config FVBUSONIO = ON // USB BUSON controlled by USB module
 
 
+
 int main() {
     // do your TRIS and LAT commands here
 	TRISAbits.TRISA4 = 0;	  // RA4 as output
 	TRISBbits.TRISB4 = 1;     // RB4 as input
 	LATAbits.LATA4 = 0;      // RA4 is high
-
-	i2c_master_setup();      // enable I2C module
 	
-	i2c_master_start();      // make the start bit
-
-	i2c_master_send(12<1|0); // write the address, shifted left by 1, or'ed with a 0 to indicate writing
-
-	i2c_master_send(5);      // the register to write to
-
-	i2c_master_send(123);    // the value to put in the register
-
-	i2c_master_stop();       // make the stop bit
-
+	initExpander();
+	
+/* 	ANSELBbits.ANSB2 = 0;    // turn off analog
+	ANSELBbits.ANSB3 = 0;
+	i2c_master_setup();
+	i2c_master_start();
+	i2c_master_send(0x40); // write mode
+	i2c_master_send(0x00);  // IODIR
+	i2c_master_send(0xf0);  // pin 0-3 are output, 4-7 are input
+	i2c_master_stop();  */
+	
+	while(1){
+/* 		i2c_master_start();
+		i2c_master_send(0x40);
+		i2c_master_send(0x0A);
+		i2c_master_send(0b1);
+		i2c_master_stop();  */
+		
+		char level = getExpander();   // value of pin 7
+		setExpander(0, level);
+		
+/*  	i2c_master_start();
+		i2c_master_send(0x40);
+		i2c_master_send(0x09);           // read from GPIO
+		i2c_master_restart();
+		i2c_master_send(0x41);
+		char r = (i2c_master_recv()>>7);      // save the value returned
+		i2c_master_ack(1);               // make the ack so the slave knows we got it
+		i2c_master_stop();
+		
+		i2c_master_start();
+		i2c_master_send(0x40);   	 // A0 to A2 are 0, write mode
+		i2c_master_send(0x0A);    	 // GPIO
+		if (r==0)
+			i2c_master_send(0b0);       // value of GPIO, pin is a binary command having 8 bits
+		else if (r==1)
+			i2c_master_send(0b1);
+		i2c_master_stop(); */
+	}
 }
