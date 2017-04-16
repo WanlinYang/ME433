@@ -1,5 +1,6 @@
 #include<xc.h>           // processor SFR definitions
 #include<sys/attribs.h>  // __ISR macro
+#include<stdio.h>
 #include"ILI9163C.h"
 
 // DEVCFG0
@@ -37,7 +38,12 @@
 #pragma config FUSBIDIO = ON // USB pins controlled by USB module
 #pragma config FVBUSONIO = ON // USB BUSON controlled by USB module
 
+#define STRINGLENTH 100
 
+void print_char(char ch, unsigned short x, unsigned short y, unsigned short color);
+void print_string(char str[], unsigned short x, unsigned short y, unsigned short color);
+void bar(unsigned short x, unsigned short y, unsigned short color, unsigned short back_color);
+void clearBar(unsigned short xmin, unsigned short xmax, unsigned short ymin, unsigned short ymax, unsigned short color);
 
 int main() {
     // do your TRIS and LAT commands here
@@ -48,9 +54,72 @@ int main() {
 	SPI1_init();
 	LCD_init();
 	LCD_clearScreen(0xffff);
-	LCD_drawPixel(50,50,0xf000);
+	char str[STRINGLENTH];
+	sprintf(str, "Hello World%%d!");
+	print_string(str,28,32,0x0000);
 	
 	while(1){
-		;
+		bar(10,50,0xf000,0xffff);
+	}
+	
+}
+
+void print_char(char ch, unsigned short x, unsigned short y, unsigned short color){
+	char row;
+	unsigned short i,j;
+	for (j=0; j<=15; j++){  // jth row of the char
+		for (i=0; i<=4; i++){  // ith pixel of the row
+			row = ASCII[ch-0x20][i];
+			if ( (row>>j)&0x01 ){
+				LCD_drawPixel(i+x,j+y,color);
+			}
+		}
 	}
 }
+
+void print_string(char str[], unsigned short x, unsigned short y, unsigned short color){
+	char ch = str[0];
+	int i = 0, j = 0;       // ith character of string, jth pixel of the entire row
+	while (1){
+		ch = str[i];
+		if (ch=='\0')
+			break;
+		print_char(ch, x+j, y, color);
+		j = j+6;            // 1 pixel between two characters
+		i++;
+	}
+}
+
+void clearBar(unsigned short xmin, unsigned short xmax, unsigned short ymin, unsigned short ymax, unsigned short color){
+	unsigned short i,j;
+	for(i=xmin; i<=xmax; i++){
+		for(j=ymin; j<=ymax; j++){
+			LCD_drawPixel(i,j,color);
+		}
+	}
+}
+
+void bar(unsigned short x, unsigned short y, unsigned short color, unsigned short back_color){
+	unsigned short i,j;
+	for (i=0; i<=100; i++){
+		for (j=0; j<=5; j++){
+			LCD_drawPixel(i+x,y+j,color);
+		}
+		char ch[10];
+		sprintf(ch,"%d",i);
+		print_string(ch,x+45,y+10,color);
+		_CP0_SET_COUNT(0);
+		while (_CP0_GET_COUNT()<120000) {;}
+		clearBar(x+45,x+70,y+6,y+22,back_color);
+	}
+	clearBar(x,x+100,y,y+5,back_color);
+}
+
+
+
+
+
+
+
+
+
