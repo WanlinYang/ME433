@@ -39,6 +39,8 @@
 #pragma config FVBUSONIO = ON // USB BUSON controlled by USB module
 
 #define STRINGLENTH 100
+#define BARWIDTH 10
+#define FREQUENCY 5
 
 void print_char(char ch, unsigned short x, unsigned short y, unsigned short color);
 void print_string(char str[], unsigned short x, unsigned short y, unsigned short color);
@@ -101,18 +103,24 @@ void clearBar(unsigned short xmin, unsigned short xmax, unsigned short ymin, uns
 
 void bar(unsigned short x, unsigned short y, unsigned short color, unsigned short back_color){
 	unsigned short i,j;
+	long int count = 24000000/(FREQUENCY*100);
 	for (i=0; i<=100; i++){
-		for (j=0; j<=5; j++){
+		for (j=0; j<=BARWIDTH; j++){
 			LCD_drawPixel(i+x,y+j,color);
 		}
-		char ch[10];
-		sprintf(ch,"%d",i);
-		print_string(ch,x+45,y+10,color);
+		char ch1[10],ch2[10];
+		sprintf(ch1,"%d",i);
+		print_string(ch1,x+45,y+5+BARWIDTH,color);
+		
+		clearBar(x+45,x+80,y+BARWIDTH+25,y+BARWIDTH+41,back_color);
+		sprintf(ch2,"%.2f",(double)_CP0_GET_COUNT()/count);
+		print_string(ch2,x+45,y+25+BARWIDTH,color);
+		
 		_CP0_SET_COUNT(0);
-		while (_CP0_GET_COUNT()<120000) {;}
-		clearBar(x+45,x+70,y+6,y+22,back_color);
+		while (_CP0_GET_COUNT()<count) {;}
+		clearBar(x+45,x+70,y+BARWIDTH+5,y+BARWIDTH+21,back_color);
 	}
-	clearBar(x,x+100,y,y+5,back_color);
+	clearBar(x,x+100,y,y+BARWIDTH,back_color);
 }
 
 
