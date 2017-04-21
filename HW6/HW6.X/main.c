@@ -112,9 +112,9 @@ void bar(unsigned short x, unsigned short y, unsigned short color, unsigned shor
 		sprintf(ch1,"%d",i);
 		print_string(ch1,x+45,y+5+BARWIDTH,color);
 		
-		clearBar(x+45,x+80,y+BARWIDTH+25,y+BARWIDTH+41,back_color);
-		sprintf(ch2,"%.2f",(double)_CP0_GET_COUNT()/count);
-		print_string(ch2,x+45,y+25+BARWIDTH,color);
+		clearBar(x+47,x+90,y+BARWIDTH+25,y+BARWIDTH+41,back_color);
+		sprintf(ch2,"FPS:%.2f",(double)_CP0_GET_COUNT()/count);
+		print_string(ch2,x+25,y+25+BARWIDTH,color);
 		
 		_CP0_SET_COUNT(0);
 		while (_CP0_GET_COUNT()<count) {;}
