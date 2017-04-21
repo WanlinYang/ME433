@@ -38,15 +38,33 @@
 #pragma config FUSBIDIO = ON // USB pins controlled by USB module
 #pragma config FVBUSONIO = ON // USB BUSON controlled by USB module
 
-void I2C_read_multiple(unsigned char address, unsigned char register, unsigned char * data, int length){
+#define STRLENGTH 100
+#define FREQUENCY 5
+
+void I2C_read_multiple(unsigned char address, unsigned char regis, unsigned char *data, int length){
+	i2c_master_start();
+	unsigned char write = address<<1 | 0;        // address is 0xd4
+	unsigned char read = address<<1 | 1;
+
+	i2c_master_send(write);
+	i2c_master_send(regis);         //for OUT_TEMP_L, register is 0x20
+	i2c_master_restart();
+	i2c_master_send(read);
 	
+	int i = 0;
+	for(i=0; i<length; i++){
+		*data++ = i2c_master_recv();
+		i2c_master_ack(0);      // continue to read
+	}
+	i2c_master_ack(1);          // make the ack so the slave knows we got it
+	i2c_master_stop();
 }
 
 int main() {
     // do your TRIS and LAT commands here
 	TRISAbits.TRISA4 = 0;	  // RA4 as output
 	TRISBbits.TRISB4 = 1;     // RB4 as input
-	LATAbits.LATA4 = 1;      // RA4 is high
+	LATAbits.LATA4 = 1;       // RA4 is high
 	
 	SPI1_init();
 	LCD_init();
@@ -60,13 +78,13 @@ int main() {
 	i2c_master_send(0x0f);  // want to read WHOAMI address
 	i2c_master_restart();
 	i2c_master_send(0xd5);  // (SAD+) read mode
-	char r = i2c_master_recv(); // receive
+	char who_am_i = i2c_master_recv(); // receive
 	i2c_master_ack(1);
 	i2c_master_stop();
 		
-	char str[50];
-	sprintf(str,"0x%0x",r);
-	print_string(str,48,32,BLACK);
+	char message[STRLENGTH];
+	sprintf(message,"0x%0x",who_am_i);
+	print_string(message,48,32,BLACK);   // should be 0x69 or 0b01101001
 	
 	i2c_master_start();     // turn on the accelerometer
 	i2c_master_send(0xd4);  // write mode
@@ -85,9 +103,43 @@ int main() {
 	i2c_master_send(0x04);  // only IF_INC is 1
 	i2c_master_stop();
 	
+	char data[STRLENGTH];
+	short data_combine[STRLENGTH];
+	char message[STRLENGTH];
+	int i = 0;
+	long count = 0;
 	
 	while(1){
+		count = 24000000/(FREQUENCY*100);
+		_CP0_SET_COUNT(0);
+		while (_CP0_GET_COUNT()<count) {;}
+		
+		I2C_read_multiple(0xd4, 0x20, data, 14);
 
+		for(i=0; i<7; i++){
+			*data_combine++ = data[2*i]<<8 | data[i];
+		}
+/*		data_combine:
+		0: temperature
+		1: gyroscope x
+		2: gyroscope y
+		3: gyroscope z
+		4: accelerometer x
+		5: accelerometer y
+		6: accelerometer z
+*/
+		clearBar(45,80,50,69,WHITE);
+		sprintf(message,"x:%d",data_combine[4]);
+		print_string(message,48,50,RED);
+		
+		clearBar(45,80,70,89,WHITE);
+		sprintf(message,"y:%d",data_combine[5]);
+		print_string(message,48,70,RED);
+		
+		clearBar(45,80,90,109,WHITE);
+		sprintf(message,"z:%d",data_combine[6]);
+		print_string(message,48,90,RED);
+		
 		
 /* 		i2c_master_start();
 		i2c_master_send(0x40);
