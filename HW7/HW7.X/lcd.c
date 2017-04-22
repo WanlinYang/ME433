@@ -35,24 +35,29 @@ void clearBar(unsigned short xmin, unsigned short xmax, unsigned short ymin, uns
 	}
 }
 
-/* void bar(unsigned short x, unsigned short y, unsigned short color, unsigned short back_color){
-	unsigned short i,j;
-	long int count = 24000000/(FREQUENCY*100);
-	for (i=0; i<=100; i++){
-		for (j=0; j<=BARWIDTH; j++){
-			LCD_drawPixel(i+x,y+j,color);
-		}
-		char ch1[10],ch2[10];
-		sprintf(ch1,"%d",i);
-		print_string(ch1,x+45,y+5+BARWIDTH,color);
-		
-		clearBar(x+47,x+90,y+BARWIDTH+25,y+BARWIDTH+41,back_color);
-		sprintf(ch2,"FPS:%.2f",(double)_CP0_GET_COUNT()/count);
-		print_string(ch2,x+25,y+25+BARWIDTH,color);
-		
-		_CP0_SET_COUNT(0);
-		while (_CP0_GET_COUNT()<count) {;}
-		clearBar(x+45,x+70,y+BARWIDTH+5,y+BARWIDTH+21,back_color);
+void flowbar(short gx, short gy){
+	int x_length, y_length;
+	x_length = (int)((float)gx/16500*64);
+	y_length = (int)((float)gy/16500*64);
+	int abs_x_length = x_length, abs_y_length = y_length;
+	
+	if(x_length<0){
+		abs_x_length = -x_length;
 	}
-	clearBar(x,x+100,y,y+BARWIDTH,back_color);
-} */
+	if(y_length<0){
+		abs_y_length = -y_length;
+	}
+	int i,j;
+	clearBar(0,128,64-BARWIDTH,64+BARWIDTH,WHITE);
+	clearBar(64-BARWIDTH,64+BARWIDTH,0,128,WHITE);
+	for (i=0; i<abs_x_length; i++){
+		for(j=0; j<BARWIDTH; j++){
+			LCD_drawPixel(-(x_length/abs_x_length)*i+64,j+64-BARWIDTH/2,RED);
+		}
+	}
+	for (i=0; i<abs_y_length; i++){
+		for(j=0; j<BARWIDTH; j++){
+			LCD_drawPixel(j+64-BARWIDTH/2,-(y_length/abs_y_length)*i+64,BLUE);
+		}
+	}
+}
