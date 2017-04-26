@@ -39,7 +39,7 @@
 #pragma config FVBUSONIO = ON // USB BUSON controlled by USB module
 
 #define STRLENGTH 100
-#define FREQUENCY 0.5
+#define FREQUENCY 20    // frequency of drawing a whole bar
 
 void I2C_read_multiple(unsigned char address, unsigned char regis, unsigned char *data, int length);
 void IMUinit(void);
@@ -59,7 +59,7 @@ int main() {
 
 	unsigned char data[STRLENGTH];
 	short data_combine[STRLENGTH];
-	long count = 24000000/(FREQUENCY*100);
+	long count = 24000000/(FREQUENCY);
 	int i = 0;
 	
 	while(1){

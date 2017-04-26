@@ -52,12 +52,12 @@ void flowbar(short gx, short gy){
 	clearBar(64-BARWIDTH,64+BARWIDTH,0,128,WHITE);
 	for (i=0; i<abs_x_length; i++){
 		for(j=0; j<BARWIDTH; j++){
-			LCD_drawPixel(-(x_length/abs_x_length)*i+64,j+64-BARWIDTH/2,RED);
+			LCD_drawPixel((x_length/abs_x_length)*i+64,j+64-BARWIDTH/2,RED);
 		}
 	}
 	for (i=0; i<abs_y_length; i++){
 		for(j=0; j<BARWIDTH; j++){
-			LCD_drawPixel(j+64-BARWIDTH/2,-(y_length/abs_y_length)*i+64,BLUE);
+			LCD_drawPixel(j+64-BARWIDTH/2,(y_length/abs_y_length)*i+64,BLUE);
 		}
 	}
 }
