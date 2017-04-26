@@ -116,6 +116,9 @@ void APP_Initialize ( void )
 {
     /* Place the App state machine in its initial state. */
     appData.state = APP_STATE_INIT;
+    TRISAbits.TRISA4 = 0;	  // RA4 as output
+	TRISBbits.TRISB4 = 1;     // RB4 as input
+	LATAbits.LATA4 = 1;      // RA4 is high
 
     
     /* TODO: Initialize your application's state machine and other
@@ -154,7 +157,10 @@ void APP_Tasks ( void )
 
         case APP_STATE_SERVICE_TASKS:
         {
-        
+            _CP0_SET_COUNT(0);
+            while (_CP0_GET_COUNT()<12000) {;}
+            LATAbits.LATA4 = !LATAbits.LATA4;
+            while (!PORTBbits.RB4) {;}
             break;
         }
 

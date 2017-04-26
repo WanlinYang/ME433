@@ -39,7 +39,7 @@
 #pragma config FVBUSONIO = ON // USB BUSON controlled by USB module
 
 #define STRLENGTH 100
-#define FREQUENCY 5
+#define FREQUENCY 0.5
 
 void I2C_read_multiple(unsigned char address, unsigned char regis, unsigned char *data, int length);
 void IMUinit(void);
