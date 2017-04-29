@@ -62,6 +62,8 @@ uint8_t APP_MAKE_BUFFER_DMA_READY dataOut[APP_READ_BUFFER_SIZE];
 uint8_t APP_MAKE_BUFFER_DMA_READY readBuffer[APP_READ_BUFFER_SIZE];
 int len, i = 0;
 int startTime = 0;
+unsigned char data_imu[100];
+short data_combine[100];
 
 // *****************************************************************************
 /* Application Data
@@ -330,6 +332,11 @@ void APP_Initialize(void) {
 
     /* Set up the read buffer */
     appData.readBuffer = &readBuffer[0];
+	
+	IMU_init();
+	TRISAbits.TRISA4 = 0;	  // RA4 as output
+	TRISBbits.TRISB4 = 1;     // RB4 as input
+	LATAbits.LATA4 = 1;      // RA4 is high
 
     startTime = _CP0_GET_COUNT();
 }
@@ -381,7 +388,7 @@ void APP_Tasks(void) {
             /* If a read is complete, then schedule a read
              * else wait for the current read to complete */
 
-            appData.state = APP_STATE_WAIT_FOR_READ_COMPLETE;
+            //appData.state = APP_STATE_WAIT_FOR_READ_COMPLETE;
             if (appData.isReadComplete == true) {
                 appData.isReadComplete = false;
                 appData.readTransferHandle = USB_DEVICE_CDC_TRANSFER_HANDLE_INVALID;
@@ -389,12 +396,16 @@ void APP_Tasks(void) {
                 USB_DEVICE_CDC_Read(USB_DEVICE_CDC_INDEX_0,
                         &appData.readTransferHandle, appData.readBuffer,
                         APP_READ_BUFFER_SIZE);
-
+				
                 if (appData.readTransferHandle == USB_DEVICE_CDC_TRANSFER_HANDLE_INVALID) {
                     appData.state = APP_STATE_ERROR;
                     break;
                 }
             }
+			if(appData.readBuffer[0]=='r'){
+				appData.state = APP_STATE_WAIT_FOR_READ_COMPLETE;
+			}
+			
 
             break;
 
@@ -404,11 +415,11 @@ void APP_Tasks(void) {
             if (APP_StateReset()) {
                 break;
             }
-
+			
             /* Check if a character was received or a switch was pressed.
              * The isReadComplete flag gets updated in the CDC event handler. */
 
-            if (appData.isReadComplete || _CP0_GET_COUNT() - startTime > (48000000 / 2 / 5)) {
+            if (appData.isReadComplete || _CP0_GET_COUNT() - startTime > (2400000 / 2 / 5)) {
                 appData.state = APP_STATE_SCHEDULE_WRITE;
             }
 
@@ -425,10 +436,22 @@ void APP_Tasks(void) {
 
             appData.writeTransferHandle = USB_DEVICE_CDC_TRANSFER_HANDLE_INVALID;
             appData.isWriteComplete = false;
-            appData.state = APP_STATE_WAIT_FOR_WRITE_COMPLETE;
 
-            len = sprintf(dataOut, "%d\r\n", i);
-            i++;
+            appData.state = APP_STATE_WAIT_FOR_WRITE_COMPLETE;
+			
+			IMU_read(0x6a, 0x22, data_imu, 12);
+			int j = 0;
+			for(j=0; j<6; j++){
+				data_combine[j] = data_imu[2*j+1]<<8 | data_imu[2*j];
+			}			
+            len = sprintf(dataOut, "%3d  %8.2f  %8.2f  %8.2f  %8.3f  %8.3f  %8.3f\r\n", i, (float)(data_combine[0]/10), (float)(data_combine[1]/10),
+                (float)(data_combine[2]/10),(float)(data_combine[3]*9.8/16200),(float)(data_combine[4]*9.8/16200),(float)(data_combine[5]*9.8/16200));
+			
+			if(i == 100){
+				appData.readBuffer[0] = 'a';
+				i = 0;
+			}
+			i++;
             if (appData.isReadComplete) {
                 USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
                         &appData.writeTransferHandle,
