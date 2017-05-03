@@ -61,7 +61,8 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 uint8_t APP_MAKE_BUFFER_DMA_READY dataOut[APP_READ_BUFFER_SIZE];
 uint8_t APP_MAKE_BUFFER_DMA_READY readBuffer[APP_READ_BUFFER_SIZE];
 int len, i = 0;
-float data_buffer[NSAMPLE+10];
+float data_buffer_maf[NSAMPLE+10];
+float data_buffer_fir[NSAMPLE+10];
 float IIR_old = 0;
 int startTime = 0;
 unsigned char data_imu[NSAMPLE];
@@ -459,23 +460,25 @@ void APP_Tasks(void) {
 			if (i<4){
 				switch (i){
 					case 0:
-						data_buffer[i] = z_acc;
+						data_buffer_maf[i] = z_acc;
 						break;
 					case 1:
-						data_buffer[i] = (data_buffer[i-1]+z_acc)/2;
+						data_buffer_maf[i] = (data_buffer_maf[i-1]+z_acc)/2;
 						break;
 					case 2:
-						data_buffer[i] = (data_buffer[i-2]+data_buffer[i-1]+z_acc)/3;
+						data_buffer_maf[i] = (data_buffer_maf[i-2]+data_buffer_maf[i-1]+z_acc)/3;
 						break;
 					case 3:
-						data_buffer[i] = (data_buffer[i-3]+data_buffer[i-2]+data_buffer[i-1]+z_acc)/4;
+						data_buffer_maf[i] = (data_buffer_maf[i-3]+data_buffer_maf[i-2]+data_buffer_maf[i-1]+z_acc)/4;
+						break;
+					default:
 						break;
 				}
-				data_buffer[i] = z_acc;
+				//data_buffer_maf[i] = z_acc;
 			}else if (i<=NSAMPLE){
-				data_buffer[i] = (data_buffer[i-4]+data_buffer[i-3]+data_buffer[i-2]+data_buffer[i-1]+z_acc)/5;
+				data_buffer_maf[i] = (data_buffer_maf[i-4]+data_buffer_maf[i-3]+data_buffer_maf[i-2]+data_buffer_maf[i-1]+z_acc)/5;
 			}
-			float data_MAF = data_buffer[i];
+			float data_MAF = data_buffer_maf[i];
 /*     MAF       */
 
 /*     IIR       */
@@ -490,7 +493,24 @@ void APP_Tasks(void) {
 /*     IIR       */
 
 /*     FIR       */
-
+			if(i<3){
+				switch(i){
+					case 0:
+						data_buffer_fir[i] = z_acc;
+						break;
+					case 1:
+						data_buffer_fir[i] = 0.7*data_buffer_fir[i-1]+0.3*z_acc;
+						break;
+					case 2:
+						data_buffer_fir[i] = 0.3*data_buffer_fir[i-2]+0.4*data_buffer_fir[i-1]+0.3*z_acc;
+						break;
+					default:
+						break;
+				}
+			}else if(i<=NSAMPLE){
+				data_buffer_fir[i] = 0.1*data_buffer_fir[i-3]+0.2*data_buffer_fir[i-2]+0.4*data_buffer_fir[i-1]+0.3*z_acc;
+			}
+			float data_FIR = data_buffer_fir[i];
 /*     FIR       */
 
 			if(i == NSAMPLE){
@@ -499,7 +519,7 @@ void APP_Tasks(void) {
 			}
 			i++;
 
-			len = sprintf(dataOut, "%f   %f   %f\r\n", z_acc, data_MAF, data_IIR);
+			len = sprintf(dataOut, "%f   %f   %f   %f\r\n", z_acc, data_MAF, data_IIR, data_FIR);
 			USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
 					&appData.writeTransferHandle, dataOut, len,
 					USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
