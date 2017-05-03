@@ -61,9 +61,11 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 uint8_t APP_MAKE_BUFFER_DMA_READY dataOut[APP_READ_BUFFER_SIZE];
 uint8_t APP_MAKE_BUFFER_DMA_READY readBuffer[APP_READ_BUFFER_SIZE];
 int len, i = 0;
+float data_buffer[NSAMPLE+10];
+float IIR_old = 0;
 int startTime = 0;
-unsigned char data_imu[100];
-short data_combine[100];
+unsigned char data_imu[NSAMPLE];
+short data_combine[NSAMPLE];
 
 // *****************************************************************************
 /* Application Data
@@ -419,7 +421,7 @@ void APP_Tasks(void) {
             /* Check if a character was received or a switch was pressed.
              * The isReadComplete flag gets updated in the CDC event handler. */
 
-            if (appData.isReadComplete || _CP0_GET_COUNT() - startTime > (2400000 / 2 / 5)) {
+            if (appData.isReadComplete || _CP0_GET_COUNT() - startTime > (240000 / 2 / 5)) {
                 appData.state = APP_STATE_SCHEDULE_WRITE;
             }
 
@@ -440,7 +442,7 @@ void APP_Tasks(void) {
             appData.state = APP_STATE_WAIT_FOR_WRITE_COMPLETE;
 			
 			if(i == 0){
-				len = sprintf(dataOut, "%d\r\n", 100);
+				len = sprintf(dataOut, "%d\r\n", NSAMPLE);
 				USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
                         &appData.writeTransferHandle, dataOut, len,
                         USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
@@ -450,25 +452,59 @@ void APP_Tasks(void) {
 			int j = 0;
 			for(j=0; j<6; j++){
 				data_combine[j] = data_imu[2*j+1]<<8 | data_imu[2*j];
-			}			
-            len = sprintf(dataOut, "%f\r\n", (float)(data_combine[5]*9.8/16200));
-			
-			if(i == 100){
+			}
+			float z_acc = (float)(data_combine[5]*9.8/16200);
+           
+/*     MAF       */
+			if (i<4){
+				switch (i){
+					case 0:
+						data_buffer[i] = z_acc;
+						break;
+					case 1:
+						data_buffer[i] = (data_buffer[i-1]+z_acc)/2;
+						break;
+					case 2:
+						data_buffer[i] = (data_buffer[i-2]+data_buffer[i-1]+z_acc)/3;
+						break;
+					case 3:
+						data_buffer[i] = (data_buffer[i-3]+data_buffer[i-2]+data_buffer[i-1]+z_acc)/4;
+						break;
+				}
+				data_buffer[i] = z_acc;
+			}else if (i<=NSAMPLE){
+				data_buffer[i] = (data_buffer[i-4]+data_buffer[i-3]+data_buffer[i-2]+data_buffer[i-1]+z_acc)/5;
+			}
+			float data_MAF = data_buffer[i];
+/*     MAF       */
+
+/*     IIR       */
+			float data_IIR = 0.0;
+			if (i == 0){
+				data_IIR = z_acc;
+				IIR_old = z_acc;
+			}else if (i<=NSAMPLE){
+				data_IIR = 0.7*IIR_old + 0.3*z_acc;
+				IIR_old = data_IIR;
+			}
+/*     IIR       */
+
+/*     FIR       */
+
+/*     FIR       */
+
+			if(i == NSAMPLE){
 				appData.readBuffer[0] = 'a';
 				i = -1;
 			}
 			i++;
-/*             if (appData.isReadComplete) {
-                USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
-                        &appData.writeTransferHandle,
-                        appData.readBuffer, 1,
-                        USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
-            } else { */
-                USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
-                        &appData.writeTransferHandle, dataOut, len,
-                        USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
-                startTime = _CP0_GET_COUNT();
-//            }
+
+			len = sprintf(dataOut, "%f   %f   %f\r\n", z_acc, data_MAF, data_IIR);
+			USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
+					&appData.writeTransferHandle, dataOut, len,
+					USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
+			startTime = _CP0_GET_COUNT();
+				
             break;
 
         case APP_STATE_WAIT_FOR_WRITE_COMPLETE:
