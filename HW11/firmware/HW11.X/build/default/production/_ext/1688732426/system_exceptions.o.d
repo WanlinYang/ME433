@@ -229,4 +229,6 @@ build/default/production/_ext/1688732426/system_exceptions.o:  \
  ../src/app.h  \
 ../src/system_config/default/system_definitions.h  \
  ../src/mouse.h  \
+../src/imu.h  \
+../src/i2c.h  \
  ../../../../../../microchip/harmony/v1_10/framework/system/debug/sys_debug.h 

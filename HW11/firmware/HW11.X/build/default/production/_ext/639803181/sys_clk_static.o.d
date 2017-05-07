@@ -226,4 +226,6 @@ build/default/production/_ext/639803181/sys_clk_static.o:  \
  ../../../../../../microchip/harmony/v1_10/framework/usb/usb_device.h  \
  ../../../../../../microchip/harmony/v1_10/framework/usb/usb_hid.h  \
  ../src/app.h  \
-../src/mouse.h 
+../src/mouse.h  \
+../src/imu.h  \
+../src/i2c.h 

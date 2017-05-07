@@ -255,6 +255,7 @@ void APP_Initialize(void) {
     //appData.emulateMouse = true;
     appData.hidInstance = 0;
     appData.isMouseReportSendBusy = false;
+	IMU_init();
 }
 
 /******************************************************************************
@@ -265,9 +266,11 @@ void APP_Initialize(void) {
  */
 
 void APP_Tasks(void) {
-    //static int8_t vector = 0;
-    //static uint8_t movement_length = 0;
-    //int8_t dir_table[] = {-4, -4, -4, 0, 4, 4, 4, 0};
+    static int8_t vector = 0;
+    static uint8_t movement_length = 0;
+    int8_t dir_table[] = {-4, -4, -4, 0, 4, 4, 4, 0};
+	unsigned char data_imu[100];
+	short data_combine[100];
 
     /* Check the application's current state. */
     switch (appData.state) {
@@ -305,16 +308,35 @@ void APP_Tasks(void) {
         case APP_STATE_MOUSE_EMULATE:
             
             // every 50th loop, or 20 times per second
-/*             if (movement_length > 50) {
+            if (movement_length > 50) {
                 appData.mouseButton[0] = MOUSE_BUTTON_STATE_RELEASED;
                 appData.mouseButton[1] = MOUSE_BUTTON_STATE_RELEASED;
                 appData.xCoordinate = (int8_t) dir_table[vector & 0x07];
                 appData.yCoordinate = (int8_t) dir_table[(vector + 2) & 0x07];
                 vector++;
                 movement_length = 0;
-            } */
-			appData.xCoordinate = (int8_t) 1;
-            appData.yCoordinate = (int8_t) 1;
+            }
+			
+			i2c_master_start();
+			unsigned char write = 0x6a<<1 | 0;        // address is 0xd4
+			unsigned char read = 0x6a<<1 | 1;
+
+			i2c_master_send(write);
+			i2c_master_send(0x22);         //for OUT_TEMP_L, register is 0x20, length = 14
+											//for OUTX_L_G, register is 0x22, length = 12
+			i2c_master_restart();
+			i2c_master_send(read);
+			
+			int i = 0;
+			for(i=0; i<12; i++){
+				data_imu[i] = i2c_master_recv();
+				if(i==(12-1)){
+					i2c_master_ack(1);  // make the ack so the slave knows we got it
+					break;
+				}
+				i2c_master_ack(0);      // continue to read
+			}         
+			i2c_master_stop();
 
             if (!appData.isMouseReportSendBusy) {
                 /* This means we can send the mouse report. The
@@ -366,7 +388,7 @@ void APP_Tasks(void) {
                             sizeof (MOUSE_REPORT));
                     appData.setIdleTimer = 0;
                 }
-                //movement_length++;
+                movement_length++;
             }
 
             break;
