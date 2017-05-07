@@ -256,6 +256,9 @@ void APP_Initialize(void) {
     appData.hidInstance = 0;
     appData.isMouseReportSendBusy = false;
 	IMU_init();
+	TRISAbits.TRISA4 = 0;	  // RA4 as output
+	TRISBbits.TRISB4 = 1;     // RB4 as input
+	LATAbits.LATA4 = 1;      // RA4 is high
 }
 
 /******************************************************************************
@@ -266,9 +269,9 @@ void APP_Initialize(void) {
  */
 
 void APP_Tasks(void) {
-    static int8_t vector = 0;
+    //static int8_t vector = 0;
     static uint8_t movement_length = 0;
-    int8_t dir_table[] = {-4, -4, -4, 0, 4, 4, 4, 0};
+    //int8_t dir_table[] = {-4, -4, -4, 0, 4, 4, 4, 0};
 	unsigned char data_imu[100];
 	short data_combine[100];
 
@@ -311,32 +314,22 @@ void APP_Tasks(void) {
             if (movement_length > 50) {
                 appData.mouseButton[0] = MOUSE_BUTTON_STATE_RELEASED;
                 appData.mouseButton[1] = MOUSE_BUTTON_STATE_RELEASED;
-                appData.xCoordinate = (int8_t) dir_table[vector & 0x07];
-                appData.yCoordinate = (int8_t) dir_table[(vector + 2) & 0x07];
-                vector++;
+				
+				IMU_read(0x6a, 0x22, data_imu, 12);
+				int j = 0;
+				for(j=0; j<6; j++){
+					data_combine[j] = data_imu[2*j+1]<<8 | data_imu[2*j];
+				}
+				float x_acc = (float)(data_combine[3]*20/16200);
+				float y_acc = (float)(data_combine[4]*20/16200);
+				
+                appData.xCoordinate = (int8_t) x_acc; //dir_table[vector & 0x07];
+                appData.yCoordinate = (int8_t) y_acc; //dir_table[(vector + 2) & 0x07];
+				_CP0_SET_COUNT(0);
+				while(_CP0_GET_COUNT()<240000){;}
+                //vector++;
                 movement_length = 0;
             }
-			
-			i2c_master_start();
-			unsigned char write = 0x6a<<1 | 0;        // address is 0xd4
-			unsigned char read = 0x6a<<1 | 1;
-
-			i2c_master_send(write);
-			i2c_master_send(0x22);         //for OUT_TEMP_L, register is 0x20, length = 14
-											//for OUTX_L_G, register is 0x22, length = 12
-			i2c_master_restart();
-			i2c_master_send(read);
-			
-			int i = 0;
-			for(i=0; i<12; i++){
-				data_imu[i] = i2c_master_recv();
-				if(i==(12-1)){
-					i2c_master_ack(1);  // make the ack so the slave knows we got it
-					break;
-				}
-				i2c_master_ack(0);      // continue to read
-			}         
-			i2c_master_stop();
 
             if (!appData.isMouseReportSendBusy) {
                 /* This means we can send the mouse report. The
