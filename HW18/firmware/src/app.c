@@ -63,7 +63,7 @@ uint8_t APP_MAKE_BUFFER_DMA_READY readBuffer[APP_READ_BUFFER_SIZE];
 int len, i = 0;
 int startTime = 0;
 int ii = 0;
-int data = 0;
+int data1 = 0, data2 = 0, i_data = 0;
 char rx[100];
 
 // *****************************************************************************
@@ -458,24 +458,45 @@ void APP_Tasks(void) {
             if (appData.isReadComplete) {
 
 				if(appData.readBuffer[0] == '\r' || appData.readBuffer[0] == '\n'){
-					sscanf(rx, "%d", &data);
-					len = sprintf(dataOut, "\r\ndata = %d\r\n", data);
-					USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
-                        &appData.writeTransferHandle, dataOut, len,
-                        USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
-					if (data < 0){
-						LATAbits.LATA1 = 0; // direction
-						OC1RS = -data; // velocity, 50%
-					} else {
-						LATAbits.LATA1 = 1; // direction
-						OC1RS = data; // velocity, 50%
+					
+					if(i_data == 0){
+						sscanf(rx, "%d", &data1);
+						len = sprintf(dataOut, "\r\ndata1 = %d ii=%d\r\n", data1, ii);
+						USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
+							&appData.writeTransferHandle, dataOut, len,
+							USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
+						if (data1 < 0){
+							LATAbits.LATA1 = 0; // direction
+							OC1RS = -data1; // velocity, 50%
+						} else {
+							LATAbits.LATA1 = 1; // direction
+							OC1RS = data1; // velocity, 50%
+						}
+						i_data++;
+					} else if (i_data == 1){
+						sscanf(rx, "%d", &data2);
+						len = sprintf(dataOut, "\r\ndata2 = %d ii=%d\r\n", data2, ii);
+						USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
+							&appData.writeTransferHandle, dataOut, len,
+							USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
+						if (data2 < 0){
+							LATBbits.LATB3 = 0; // direction
+							OC4RS = -data2; // velocity, 50%
+						} else {
+							LATBbits.LATB3 = 1; // direction
+							OC4RS = data2; // velocity, 50%
+						}
+						i_data = 0;
 					}
+					
 				}
 				rx[ii] = appData.readBuffer[0];
 				ii++;
 				if(appData.readBuffer[0] == '\r' || appData.readBuffer[0] == '\n'){
 					ii = 0;
+					memset(rx,'\0',sizeof(rx));
 				}
+				
                 USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
                         &appData.writeTransferHandle,
                         appData.readBuffer, 1,
