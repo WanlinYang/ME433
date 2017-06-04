@@ -461,7 +461,7 @@ void APP_Tasks(void) {
 					
 					if(i_data == 0){
 						sscanf(rx, "%d", &data1);
-						len = sprintf(dataOut, "\r\ndata1 = %d ii=%d\r\n", data1, ii);
+						len = sprintf(dataOut, "\r\ndata1 = %d\r\n", data1);
 						USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
 							&appData.writeTransferHandle, dataOut, len,
 							USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
@@ -475,7 +475,7 @@ void APP_Tasks(void) {
 						i_data++;
 					} else if (i_data == 1){
 						sscanf(rx, "%d", &data2);
-						len = sprintf(dataOut, "\r\ndata2 = %d ii=%d\r\n", data2, ii);
+						len = sprintf(dataOut, "\r\ndata2 = %d\r\n", data2);
 						USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
 							&appData.writeTransferHandle, dataOut, len,
 							USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
