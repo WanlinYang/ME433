@@ -64,6 +64,7 @@ int len, i = 0;
 int startTime = 0;
 int ii = 0;
 int data1 = 0, data2 = 0, i_data = 0;
+int pwm1 = 0, pwm2 = 0;
 char rx[100];
 
 // *****************************************************************************
@@ -467,12 +468,14 @@ void APP_Tasks(void) {
 						USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
 							&appData.writeTransferHandle, dataOut, len,
 							USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
-						if (data1 < 0){
+						if (data1 < 50){
 							LATAbits.LATA1 = 0; // direction
-							OC1RS = -data1; // velocity, 50%
+							pwm1 = (50-data1)*24;   // 1200/50 = 24
+							OC1RS = pwm1; // velocity, 50%
 						} else {
 							LATAbits.LATA1 = 1; // direction
-							OC1RS = data1; // velocity, 50%
+							pwm1 = (data1-50)*24;
+							OC1RS = pwm1; // velocity, 50%
 						}
 						i_data++;
 					} else if (i_data == 1){
@@ -481,12 +484,14 @@ void APP_Tasks(void) {
 						USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
 							&appData.writeTransferHandle, dataOut, len,
 							USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
-						if (data2 < 0){
+						if (data2 < 50){
 							LATBbits.LATB3 = 0; // direction
-							OC4RS = -data2; // velocity, 50%
+							pwm2 = (50-data2)*24;
+							OC4RS = pwm2; // velocity, 50%
 						} else {
 							LATBbits.LATB3 = 1; // direction
-							OC4RS = data2; // velocity, 50%
+							pwm2 = (data2-50)*24;
+							OC4RS = pwm2; // velocity, 50%
 						}
 						i_data = 0;
 					}
