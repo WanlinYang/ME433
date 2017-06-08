@@ -58,14 +58,21 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // *****************************************************************************
 // *****************************************************************************
 
+
 uint8_t APP_MAKE_BUFFER_DMA_READY dataOut[APP_READ_BUFFER_SIZE];
 uint8_t APP_MAKE_BUFFER_DMA_READY readBuffer[APP_READ_BUFFER_SIZE];
 int len, i = 0;
 int startTime = 0;
 int ii = 0;
-int data1 = 0, data2 = 0, i_data = 0;
-int pwm1 = 0, pwm2 = 0;
+//int data1 = 0, data2 = 0, i_data = 0;
+static int error = 0, eint = 0, edot = 0, preve = 0;
+static int ref_pwm = 0;
+static float Kp = 3, Ki = 0, Kd = 0;
+static int COM = 0, pre_COM = 0;
+//int pwm1 = 0, pwm2 = 0;
 char rx[100];
+int his_length = 10;
+int COM_his[10], h_i = 0;
 
 // *****************************************************************************
 /* Application Data
@@ -454,12 +461,105 @@ void APP_Tasks(void) {
             appData.isWriteComplete = false;
             appData.state = APP_STATE_WAIT_FOR_WRITE_COMPLETE;
 
-            len = sprintf(dataOut, "%d\r\n", i);
+            //len = sprintf(dataOut, "%d\r\n", i);
             i++;
             if (appData.isReadComplete) {
 				
 				i = 0;   // if the length of the readBuffer is longer than 1
 				while(appData.readBuffer[i] != '\0'){
+					if(appData.readBuffer[i] == '\r' || appData.readBuffer[i] == '\n'){
+						sscanf(rx, "%d", &COM);    // 0 to 640
+						len = sprintf(dataOut, "\r\nCOM = %d\r\n", COM);
+						USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
+							&appData.writeTransferHandle, dataOut, len,
+							USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
+						error = COM - 320;
+						eint = eint + error;
+                        
+                    // Anti wind-up
+						int eint_max = 1000;
+						if (eint > eint_max)
+							eint = eint_max;
+						else if (eint < -eint_max)
+							eint = -eint_max;
+						
+						edot = error - preve;
+						preve = error;
+						
+                        if ((error>-100 && error<0)  || (error<100 && error>0)){
+                            ref_pwm = 5*error;
+                        } else {
+                            ref_pwm = 3*error + 0*eint + 0*edot;
+                        }
+						LATAbits.LATA1 = 1; // direction
+						LATBbits.LATB3 = 1; // direction
+                        if (ref_pwm > 0){
+                            OC1RS = 1200/2;    // turn right
+                            OC4RS = (1200 - ref_pwm)/4;
+                        } else {
+                            OC1RS = (1200 - ref_pwm)/4;     // turn left
+                            OC4RS = 1200/2;
+                        }
+						//OC1RS = 600 - ref_pwm;
+						//OC4RS = 600 + ref_pwm;
+                        
+                        
+						if(h_i<his_length){
+							COM_his[h_i] = COM;
+							h_i++;
+						} else {
+							int h_ii = 0;
+							for(h_ii=0; h_ii<his_length; h_ii++){
+								COM_his[h_ii] = COM_his[h_ii+1];
+							}
+							COM_his[his_length-1] = COM;
+						}
+						
+						
+						if (COM<5 || COM>635){
+							int direction_l = 1;
+							int direction_r = 1;
+							
+							int di_i = 0;
+							for(di_i=0; di_i<his_length; di_i++){
+								if(COM_his[di_i]>500){
+									direction_l = direction_l*1;
+								}else{
+									direction_l = direction_l*0;
+								}
+								
+								if(COM_his[di_i<140]){
+									direction_r = direction_r*1;
+								}else{
+									direction_r = direction_r*0;
+								}
+							}
+							
+							if(direction_r == 1){    // turn right
+								OC1RS = 0;
+								OC4RS = 1200/2;
+							} 
+							if(direction_l == 1){     // turn left
+								OC1RS = 1200/2;
+								OC4RS = 0;
+							}
+						}
+						pre_COM = COM;
+						
+					}
+					
+					rx[ii] = appData.readBuffer[i];
+					ii++;
+					
+					
+					if(appData.readBuffer[i] == '\r' || appData.readBuffer[i] == '\n'){
+						ii = 0;
+						memset(rx,'\0',sizeof(rx));
+					}
+					i++;
+				}
+				
+/* 				while(appData.readBuffer[i] != '\0'){
 					if(appData.readBuffer[i] == '\r' || appData.readBuffer[i] == '\n'){
 					
 					if(i_data == 0){
@@ -505,7 +605,7 @@ void APP_Tasks(void) {
 					}
 					i++;
 				}
-	
+	 */
                 USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
                         &appData.writeTransferHandle,
                         appData.readBuffer, 1,

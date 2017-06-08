@@ -81,7 +81,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
     private TextView mTextView;
 
     int thresh;
-    int COM;
+    int[] COM = new int[10];
     int startY;
     static long prevtime = 0; // for FPS calculation
 
@@ -91,20 +91,20 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         setContentView(R.layout.activity_main);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); // keeps the screen from turning off
 
-        myControl1 = (SeekBar) findViewById(R.id.seek1);
+        //myControl1 = (SeekBar) findViewById(R.id.seek1);
         myControl2 = (SeekBar) findViewById(R.id.seek2);
 
-        myTextView = (TextView) findViewById(R.id.textView01);
-        myTextView.setText("Enter whatever you Like!");
+        //myTextView = (TextView) findViewById(R.id.textView01);
+        //myTextView.setText("Enter whatever you Like!");
 
-        setMyControlListener1();
+        //setMyControlListener1();
         setMyControlListener2();
 
-        myTextView2 = (TextView) findViewById(R.id.textView02);
+        //myTextView2 = (TextView) findViewById(R.id.textView02);
         myScrollView = (ScrollView) findViewById(R.id.ScrollView01);
         myTextView3 = (TextView) findViewById(R.id.textView03);
-        button = (Button) findViewById(R.id.button1);
-
+        //button = (Button) findViewById(R.id.button1);
+/*
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -116,7 +116,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
             }
 
         });
-
+*/
         manager = (UsbManager) getSystemService(Context.USB_SERVICE);
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
@@ -143,7 +143,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
 
 
     }
-
+/*
     private void setMyControlListener1() {
         myControl1.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
 
@@ -166,7 +166,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
 
         });
     }
-
+*/
     private void setMyControlListener2() {
         myControl2.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
 
@@ -337,6 +337,16 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         }
     }
 
+    public int min(int r, int g, int b){
+        int min = r;
+        if(g < min){
+            min = g;
+        } else if (b < min){
+            min = b;
+        }
+        return min;
+    }
+
     // the important function
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
         // every time there is a new Camera preview frame
@@ -344,44 +354,72 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
 
         final Canvas c = mSurfaceHolder.lockCanvas();
         if (c != null) {
-            int[] pixels = new int[bmp.getWidth()]; // pixels[][] is the RGBA data
+            int[][] pixels = new int[10][bmp.getWidth()]; // pixels[][] is the RGBA data
+            int gap = 5;
             startY = bmp.getHeight()*5/10; // which row in the bitmap to analyze to read
-            bmp.getPixels(pixels, 0, bmp.getWidth(), 0, startY, bmp.getWidth(), 1);
-            COM = 0;  // center
+            //COM = 0;  // center
+            for(int i=0; i<10; i++){
+                COM[i] = 0;
+            }
 
             int sum_mr = 0;  // the sum of the mass times the radius
             int sum_m = 0;  // the sum of the masses
 
-            for (int i = 0; i < bmp.getWidth(); i++){
-                int gsr = abs(green(pixels[i])-red(pixels[i]));
-                int gsb = abs(green(pixels[i])-blue(pixels[i]));
-                int rsb = abs(red(pixels[i])-blue(pixels[i]));
+            for(int j = 0; j < 10; j++){
+                int k = startY + j*5;
+                bmp.getPixels(pixels[j], 0, bmp.getWidth(), 0, k, bmp.getWidth(), 1);
+                for (int i = 0; i < bmp.getWidth(); i++){
+                    //int gsr = abs(green(pixels[i])-red(pixels[i]));
+                    //int gsb = abs(green(pixels[i])-blue(pixels[i]));
+                    //int rsb = abs(red(pixels[i])-blue(pixels[i]));
 
-                if ( gsr<thresh && gsb<thresh && rsb<thresh && green(pixels[i])>(thresh*2) ){   // gray, and brightness
-                    pixels[i] = rgb(255, 0, 0);
+                    //int rgb_av = (red(pixels[j][i])+green(pixels[j][i])+blue(pixels[j][i]))/3;
+                    //int rgb_min = min(red(pixels[j][i]), green(pixels[j][i]), blue(pixels[j][i]));
+                    //double saturation = 1 - rgb_min/rgb_av;
+                    //double thresh_d = (double)thresh/100;
 
-                    sum_m = sum_m + green(pixels[i])+red(pixels[i])+blue(pixels[i]);
-                    sum_mr = sum_mr + (green(pixels[i])+red(pixels[i])+blue(pixels[i]))*i;
+                    //if ( gsr<thresh && gsb<thresh && rsb<thresh && green(pixels[i])>(thresh*2) ){   // gray, and brightness
+                    //if (saturation < thresh_d){
+                    if (-437.5371+1.67219*(float)red(pixels[j][i])+0.083888*(float)green(pixels[j][i])+0.83757*(float)blue(pixels[j][i])>0){
+                        pixels[j][i] = rgb(255, 0, 0);
+
+                        sum_m = sum_m + green(pixels[j][i])+red(pixels[j][i])+blue(pixels[j][i]);
+                        sum_mr = sum_mr + (green(pixels[j][i])+red(pixels[j][i])+blue(pixels[j][i]))*i;
+                    }
+                }
+                bmp.setPixels(pixels[j], 0, bmp.getWidth(), 0, k, bmp.getWidth(), 1);
+
+                // only use the data if there were a few pixels identified, otherwise you might get a divide by 0 error
+                if(sum_m>5){
+                    COM[j] = sum_mr / sum_m;    // center of mass from 0 to 640
+                }
+                else{
+                    COM[j] = 0;
                 }
             }
-            bmp.setPixels(pixels, 0, bmp.getWidth(), 0, startY, bmp.getWidth(), 1);
 
-            // only use the data if there were a few pixels identified, otherwise you might get a divide by 0 error
-            if(sum_m>5){
-                COM = sum_mr / sum_m;
-            }
-            else{
-                COM = 0;
-            }
         }
+        int COM_sum = 0;
+        for (int i=0; i<10; i++){
+            COM_sum = COM_sum + COM[i];
+        }
+        int COM_avg = COM_sum/10;
+
+        String sendString = String.valueOf(COM_avg) + '\n';
+        try {
+            sPort.write(sendString.getBytes(), 10); // 10 is the timeout
+        } catch (IOException e) { }
 
         // draw a circle at some position
-        if(COM != 0){
-            canvas.drawCircle(COM, startY , 5, paint1); // x position, y position, diameter, color
+        for (int i=0; i<10; i++){
+            int k = startY + i*5;
+            if(COM[i] != 0){
+                canvas.drawCircle(COM[i], k , 5, paint1); // x position, y position, diameter, color
+            }
         }
 
         // write the pos as text
-        canvas.drawText("Thresh = " + thresh, 10, 200, paint1);
+        canvas.drawText("COM_avg = " + COM_avg, 10, 200, paint1);
         c.drawBitmap(bmp, 0, 0, null);
         mSurfaceHolder.unlockCanvasAndPost(c);
 
