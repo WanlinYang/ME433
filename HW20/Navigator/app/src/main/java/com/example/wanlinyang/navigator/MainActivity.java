@@ -356,7 +356,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         if (c != null) {
             int[][] pixels = new int[10][bmp.getWidth()]; // pixels[][] is the RGBA data
             int gap = 5;
-            startY = bmp.getHeight()*5/10; // which row in the bitmap to analyze to read
+            startY = 100;//bmp.getHeight()+50; // which row in the bitmap to analyze to read
             //COM = 0;  // center
             for(int i=0; i<10; i++){
                 COM[i] = 0;
@@ -404,6 +404,22 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
             COM_sum = COM_sum + COM[i];
         }
         int COM_avg = COM_sum/10;
+
+        int COM_min = COM[0];
+        int COM_max = COM[0];
+        for(int i=0; i<10; i++){
+            if(COM[i] < COM_min){
+                COM_min = COM[i];
+            }
+            if(COM[i] > COM_max){
+                COM_max = COM[i];
+            }
+        }
+        if(COM_min < 50){
+            COM_avg = COM_min;
+        } else if(COM_max > 590){
+            COM_avg = COM_max;
+        }
 
         String sendString = String.valueOf(COM_avg) + '\n';
         try {

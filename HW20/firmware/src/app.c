@@ -71,8 +71,9 @@ static float Kp = 3, Ki = 0, Kd = 0;
 static int COM = 0, pre_COM = 0;
 //int pwm1 = 0, pwm2 = 0;
 char rx[100];
-int his_length = 10;
-int COM_his[10], h_i = 0;
+int his_length = 3;
+int COM_his[3], h_i = 0;
+int direction_l = 0, direction_r = 0;
 
 // *****************************************************************************
 /* Application Data
@@ -477,7 +478,7 @@ void APP_Tasks(void) {
 						eint = eint + error;
                         
                     // Anti wind-up
-						int eint_max = 1000;
+/*						int eint_max = 1000;
 						if (eint > eint_max)
 							eint = eint_max;
 						else if (eint < -eint_max)
@@ -485,19 +486,23 @@ void APP_Tasks(void) {
 						
 						edot = error - preve;
 						preve = error;
-						
-                        if ((error>-100 && error<0)  || (error<100 && error>0)){
-                            ref_pwm = 5*error;
-                        } else {
-                            ref_pwm = 3*error + 0*eint + 0*edot;
+*/						
+
+
+                        if ((error>-50 && error<0)  || (error<50 && error>0)){
+                            ref_pwm = 4*error;
+                        } else if ((error>-150 && error<0)  || (error<150 && error>0)){
+							ref_pwm = 3*error;
+						}else {
+                            ref_pwm = 2.5*error + 0*eint + 0*edot;
                         }
 						LATAbits.LATA1 = 1; // direction
 						LATBbits.LATB3 = 1; // direction
                         if (ref_pwm > 0){
                             OC1RS = 1200/2;    // turn right
-                            OC4RS = (1200 - ref_pwm)/4;
+                            OC4RS = (1200 - ref_pwm)/3;
                         } else {
-                            OC1RS = (1200 - ref_pwm)/4;     // turn left
+                            OC1RS = (1200 - ref_pwm)/3;     // turn left
                             OC4RS = 1200/2;
                         }
 						//OC1RS = 600 - ref_pwm;
@@ -515,36 +520,64 @@ void APP_Tasks(void) {
 							COM_his[his_length-1] = COM;
 						}
 						
+						if (COM<50 || COM > 590){
+							if (pre_COM<300){
+								OC1RS = 0;
+								OC4RS = 800;
+							} else if (pre_COM>340){
+								OC1RS = 800;
+								OC4RS = 0;
+							}
+						}
 						
-						if (COM<5 || COM>635){
-							int direction_l = 1;
-							int direction_r = 1;
+/*						if (COM<70 || COM>580){
+							if(direction_l == 1){
+								OC1RS = 1200/2;
+								OC4RS = 0;
+							} else if(direction_r == 1){
+								OC1RS = 0;
+								OC4RS = 1200/2;
+							} else{
+								direction_l = 1;
+								direction_r = 1;
 							
-							int di_i = 0;
-							for(di_i=0; di_i<his_length; di_i++){
-								if(COM_his[di_i]>500){
-									direction_l = direction_l*1;
-								}else{
-									direction_l = direction_l*0;
-								}
-								
-								if(COM_his[di_i<140]){
-									direction_r = direction_r*1;
-								}else{
-									direction_r = direction_r*0;
+								int di_i = 0;
+								for(di_i=0; di_i<his_length; di_i++){
+									if(COM_his[di_i]>500){
+										direction_l = direction_l*1;
+									}else{
+										direction_l = direction_l*0;
+									}
+															
+									if(COM_his[di_i<140]){
+										direction_r = direction_r*1;
+									}else{
+										direction_r = direction_r*0;
+									}
+									
+									if (direction_l == 1){
+										direction_r = 0;
+									}
+									
+									if (direction_r == 1){
+										direction_l = 0;
+									}
 								}
 							}
+							
 							
 							if(direction_r == 1){    // turn right
 								OC1RS = 0;
 								OC4RS = 1200/2;
-							} 
-							if(direction_l == 1){     // turn left
+							} else if(direction_l == 1){     // turn left
 								OC1RS = 1200/2;
 								OC4RS = 0;
 							}
+						} */
+						if(COM>50 && COM<590){
+							pre_COM = COM;
 						}
-						pre_COM = COM;
+						
 						
 					}
 					
